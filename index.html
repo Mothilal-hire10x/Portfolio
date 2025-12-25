@@ -38,7 +38,7 @@
         
         <!-- Favicon & Icons -->
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/og-image.svg">
+        <link rel="apple-touch-icon" href="/mothilal.png">
         <meta name="theme-color" content="#0f0f23">
         <meta name="msapplication-TileColor" content="#0f0f23">
 
@@ -47,7 +47,7 @@
         <meta property="og:url" content="https://mothilal.xyz/">
         <meta property="og:title" content="Mothilal | Software Engineer & Python Developer">
         <meta property="og:description" content="Mothilal M — Software Engineer specializing in Python, FastAPI, GCP, and backend development. Building scalable systems at 10xscale.ai. Open to opportunities.">
-        <meta property="og:image" content="https://mothilal.xyz/og-image.svg">
+        <meta property="og:image" content="https://mothilal.xyz/mothilal.png">
         <meta property="og:image:alt" content="Mothilal - Software Engineer Portfolio">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
@@ -62,7 +62,7 @@
         <meta name="twitter:url" content="https://mothilal.xyz/">
         <meta name="twitter:title" content="Mothilal | Software Engineer & Python Developer">
         <meta name="twitter:description" content="Mothilal M — Software Engineer specializing in Python, FastAPI, GCP, and backend development. Building scalable systems at 10xscale.ai.">
-        <meta name="twitter:image" content="https://mothilal.xyz/og-image.svg">
+        <meta name="twitter:image" content="https://mothilal.xyz/mothilal.png">
         <meta name="twitter:image:alt" content="Mothilal - Software Engineer Portfolio">
         <meta name="twitter:creator" content="@mothilal">
         <meta name="twitter:site" content="@mothilal">
@@ -70,7 +70,7 @@
         <!-- Additional Meta for Search Engines -->
         <meta itemprop="name" content="Mothilal - Software Engineer">
         <meta itemprop="description" content="Mothilal M is a Software Engineer and Python Developer specializing in backend development, FastAPI, GCP, and scalable microservices.">
-        <meta itemprop="image" content="https://mothilal.xyz/og-image.svg">
+        <meta itemprop="image" content="https://mothilal.xyz/mothilal.png">
 
         <!-- JSON-LD Person Schema (Enhanced) -->
         <script type="application/ld+json">
@@ -87,7 +87,7 @@
             "url": "https://mothilal.xyz/",
             "image": {
                 "@type": "ImageObject",
-                "url": "https://mothilal.xyz/og-image.svg",
+                "url": "https://mothilal.xyz/mothilal.png",
                 "width": 1200,
                 "height": 630
             },
@@ -1254,6 +1254,13 @@
             transition: background-color 0.3s ease, border-color 0.3s ease;
         }
     </style>
+    <!-- reCAPTCHA Enterprise script (site key) -->
+    <script src="https://www.google.com/recaptcha/enterprise.js?render=6LfA1zYsAAAAAPr4g_m9ZyooOTETf5pXKWz1gW5R"></script>
+        <!-- Hide reCAPTCHA badge (token generation stays background) -->
+        <style>
+            /* If Google injects a visible badge, hide it for a background-only integration. */
+            .grecaptcha-badge { display: none !important; visibility: hidden !important; }
+        </style>
 </head>
 <body itemscope itemtype="https://schema.org/Person">
     <!-- Hidden SEO Content for Search Engines -->
@@ -1611,7 +1618,9 @@
                 </div>
             </div>
             <div class="contact-form">
-                <form id="contactForm" aria-label="Contact Mothilal Form">
+                    <form id="contactForm" aria-label="Contact Mothilal Form">
+                        <!-- Hidden reCAPTCHA token populated on submit -->
+                        <input type="hidden" id="recaptchaToken" name="recaptcha_token" value="">
                     <div class="form-group">
                         <label for="name">Name</label>
                         <input type="text" id="name" name="name" required autocomplete="name" placeholder="Your name">
@@ -1789,32 +1798,59 @@
             observer.observe(el);
         });
 
-        // Form submission
-        document.getElementById('contactForm').addEventListener('submit', (e) => {
+        // Form submission with reCAPTCHA token generation
+        document.getElementById('contactForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const formData = new FormData(e.target);
+
+            const formEl = e.target;
+
+            // Ensure grecaptcha is ready, then execute for action 'contact'
+            if (window.grecaptcha && grecaptcha.enterprise) {
+                try {
+                    await grecaptcha.enterprise.ready();
+                    const token = await grecaptcha.enterprise.execute('6LfA1zYsAAAAAPr4g_m9ZyooOTETf5pXKWz1gW5R', { action: 'contact' });
+                    // Set token into hidden input so it can be submitted or sent to backend
+                    const tokenInput = document.getElementById('recaptchaToken');
+                    if (tokenInput) tokenInput.value = token;
+
+                    // OPTIONAL: send token to your backend verification endpoint
+                    // If you have a server route like POST /verify-recaptcha, send token and action for server-side verification
+                    try {
+                        await fetch('/verify-recaptcha', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token, action: 'contact' })
+                        });
+                    } catch (err) {
+                        // ignore network errors for optional verification
+                        console.warn('reCAPTCHA verification endpoint not available:', err);
+                    }
+                } catch (recapErr) {
+                    console.error('reCAPTCHA error:', recapErr);
+                }
+            }
+
+            // Continue with existing mailto fallback behavior
+            const formData = new FormData(formEl);
             const name = formData.get('name');
             const email = formData.get('email');
             const subject = formData.get('subject');
             const message = formData.get('message');
 
-            // Mailto fallback
             const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`);
             const mailtoLink = `mailto:mothilal044@gmail.com?subject=${encodeURIComponent(subject)}&body=${body}`;
-            
             window.location.href = mailtoLink;
-            
-            // Show success message
-            const btn = e.target.querySelector('button');
+
+            // Show success message UI
+            const btn = formEl.querySelector('button');
             const originalText = btn.innerHTML;
             btn.innerHTML = '<span>Message Sent! ✓</span>';
             btn.style.background = 'linear-gradient(135deg, #43e97b, #38f9d7)';
-            
+
             setTimeout(() => {
                 btn.innerHTML = originalText;
                 btn.style.background = '';
-                e.target.reset();
+                formEl.reset();
             }, 3000);
         });
 
